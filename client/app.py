@@ -45,4 +45,4 @@ def send_messages():
 	return app.send_static_file('index.html')
 
 # Start running the flask app
-app.run()
+app.run(host='0.0.0.0')
