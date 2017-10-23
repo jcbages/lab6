@@ -82,7 +82,7 @@ while True:
 	curr_stat = stats.get(client_addr, {})
 
 	# Calculate arrival time of curr message
-	arrival_time = curr_time() - message['timestamp']
+	arrival_time = abs(curr_time() - message['timestamp'])
 
 	# Calculate new client stats
 	received_objects = curr_stat.get(RECV, 0) + 1
