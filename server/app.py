@@ -3,6 +3,7 @@ import json
 import sys
 import time
 from socket import *
+from threading import Thread
 
 # Define friendly keys constants for stats
 RECV = 'Received Objects'
@@ -10,6 +11,9 @@ LAST = 'Last Object Number'
 MISS = 'Missing Objects'
 AVGT = 'Average Send Time'
 OART = 'Objects Arrival Time'
+
+# Define the waiting seconds before saving
+wait_save_seconds = 5
 
 # Define a function for getting curr time in ms
 curr_time = lambda: int(round(time.time() * 1000))
@@ -26,6 +30,38 @@ buffer_size = 2048
 # Create the UDP socket object at the specified port
 server_socket = socket(AF_INET, SOCK_DGRAM)
 server_socket.bind(('', port))
+
+# Save stats into a file for every client
+def save_stats():
+	# Iterate over each client
+	for key, value in stats.items():
+		# Get variables to save
+		received_objects = stats[client_addr][RECV]
+		missing_objects = stats[client_addr][MISS]
+		avg_sent_time = float(stats[client_addr][AVGT]) / float(received_objects)
+		objects = stats[client_addr][OART]
+
+		# Write to the corresponding file
+		with open('./%s:%d.txt' % (client_addr[0], client_addr[1]), 'w') as f:
+			f.write('%s: %d\n' % (RECV, received_objects))
+			f.write('%s: %d\n' % (MISS, missing_objects))
+			f.write('%s: %.2fms\n' % (AVGT, avg_sent_time))
+
+			f.write('\nObjects arrival times...\n')
+			for curr_obj in sorted(objects):
+				f.write('%d: %dms\n' % curr_obj)
+
+# Run the save stats function periodically
+def run_save_stats():
+	# Run the save stats function & sleep forever
+	while True:
+		save_stats()
+		time.sleep(wait_save_seconds)
+
+# Create a new thread for saving async
+thread = Thread(target=run_save_stats)
+thread.daemon = True
+thread.start()
 
 # Print a friendly message indicating everything is OK
 print 'Receiving data happily at port:', port
@@ -65,13 +101,3 @@ while True:
 		AVGT: avg_sent_time,
 		OART: objects
 	}
-
-	# Write new stats to client file
-	with open('./%s:%d.txt' % (client_addr[0], client_addr[1]), 'w') as f:
-		f.write('%s: %d\n' % (RECV, received_objects))
-		f.write('%s: %d\n' % (MISS, missing_objects))
-		f.write('%s: %.2fms\n' % (AVGT, float(avg_sent_time)/float(received_objects)))
-
-		f.write('\nObjects arrival times...\n')
-		for curr_obj in sorted(objects):
-			f.write('%d: %dms\n' % curr_obj)
